@@ -1,0 +1,370 @@
+\documentclass{bioinfo}
+\copyrightyear{2009}
+\pubyear{2009}
+
+\usepackage{natbib}
+\bibliographystyle{apalike}
+
+\DeclareMathOperator*{\argmax}{argmax}
+
+\begin{document}
+\firstpage{1}
+
+\title[Inference using sequencing data]{Using sequencing data for SNP calling, association test and estimate of population genetical parameters}
+
+\author[Li]{Heng Li$^{1,}$\footnote{to whom correspondence should be addressed}}
+
+\address{$^1$Broad Institute, 7 Cambridge Center, Cambridge, MA 02142, USA}
+
+\history{Received on XXXXX; revised on XXXXX; accepted on XXXXX}
+\editor{Associate Editor: XXXXXXX}
+\maketitle
+
+\begin{abstract}
+\section{Motivation:}
+Whereas with the rapidly decreasing sequencing cost it is now affordable to sequence
+multiple human genomes, it would still be preferred to sequence many genomes at
+relatively low coverge, typically 2--6 fold, to maximize the information about
+human populations especially at the variants with low frequencies. Nonetheless, because the signal is weak in each low-coverage sample,
+genotype ascertainment in each sample is usually inaccurate. The traditional
+association test and the estimate of population parameters, which rely on accurate genotypes,
+cannot be applied.
+\section{Results:}
+We present a statistical framework for calling SNPs,
+performing association tests and inferring various population genetical parameters from
+low-coverage sequencing data. Our method directly uses genotype likelihoods without
+relying on accurate genotypes or linkage disequilibrium (LD). On real data, we showed that
+the method has high accuracy in variant calling, and achieves a similar accuracy to imputation
+based method on population parameter estimate, yet 60X faster and less affected by the lack of LD.
+\section{Availability:} http://samtools.sourceforge.net
+\section{Contact:} hengli@broadinstitute.org
+\end{abstract}
+
+\section{INTRODUCTION}
+
+The 1000 Genomes Project sets an excellent example on how to design a sequencing project to
+get the maximum output relating human populations. An important lesson from this project
+is to sequence many human samples at relatively low coverage instead of
+few samples at very high coverage. This is because with higher coverage,
+we will merely reconfirm information from other reads, but with more samples, we
+will greatly reduce the sampling fluctuations, gain power on variants present in
+multiple samples and get access to many more rare variants. On the other hand, sequencing
+errors counteract the power in variant calling, which necessitates a minimum coverage.
+The optimal balancing point is broadly regarded to be in the 2--6 fold range,
+depending on the sequencing error rate, level of linkage disequilibrium (LD) and the
+aim of the project.
+
+A major concern with this design is that at 2--6 fold coverage, 
+
+\begin{methods}
+\section{METHODS}
+\subsection{Overview}
+
+\begin{table}[!htb]
+\processtable{Common notations}{\begin{tabular}{lp{7cm}}
+\toprule
+Symbol & Description \\
+\midrule
+$n$ & Number of samples \\
+$m_i$ & Ploidy of the $i$-th sample ($1\le i\le n$)\\
+$M$ & Total number of chromosomes in samples: $M=\sum_i m_i$\\
+$d_i$ & Sequencing data (bases and qualities) for the $i$-th sample\\
+$g_i$ & Genotype (the number of reference alleles) of the $i$-th sample \mbox{($0\le g_i\le m_i$)}$^1$\\
+$\phi_k$ & Probability of observing $k$ reference alleles ($\sum_{k=0}^M\phi_k=1$) \\
+$\Pr\{A\}$ & Probability of an event $A$\\
+$\mathcal{L}_i(\theta)$ & Likelihood function for the $i$-th sample: $\mathcal{L}_i(\theta)=\Pr\{d_i|\theta\}$ \\
+\botrule
+\end{tabular}}{$^1$ In this article, we only consider biallelic variants.}
+\end{table}
+
+\subsection{Assumptions}
+
+To derive the probabilistic framework, we have to make several assumptions.
+
+\subsubsection{Site independency} We assume data at different sites are independent.
+This is frequently not true in real data because sequencing and mapping are context
+dependent. When there is an insertions or deletion (INDEL), sites nearby are also
+correlated in alignment.
+
+\subsubsection{Error independency and sample independency}
+We assume that at a site the sequencing and mapping errors of different reads
+are independent. As a result the likelihood functions of
+different individuals are independent:
+\begin{equation}
+\mathcal{L}(\theta)=\prod_{i=1}^n\mathcal{L}_i(\theta)
+\end{equation}
+In real data, errors are frequently context dependent and the independency assumption
+may not held. It is possible to model error dependency within an individual~\citep{Li:2008zr},
+but the sample independency assumption is essential to all the derivations below.
+
+\subsubsection{Biallelic variants}
+We assume all variants are biallelic. In the human population, the fraction
+of triallic SNPs is about 0.2\%~\citep{Hodgkinson:2010uq}. The biallele assumption
+does not have a big impact to the modeling of SNPs.
+
+\subsection{Computing genotype likelihoods}
+
+For one sample at a site, the sequencing data $d$ is composed of
+an array of bases on sequencing reads plus their qualities. As
+we only consider biallelic variants, we may focus on the two most
+evident types of nucleotides and drop the less evident types if present. Thus
+at any site we see at most two types of nucleotides. This treatment
+is not optimal, but mostly sufficient in practice.
+
+Suppose at a site there are $k$ reads. Without losing generality, let the first $l$
+bases ($l\le k$) be identical to the reference and the rest be
+different. The error probability of the $j$-th read base is $\epsilon_j$.
+Assuming error independency, we can derive that
+\begin{equation}\label{equ:glk}
+\mathcal{L}(g)=\frac{1}{m^k}\prod_{j=1}^l\Big[(m-g)\epsilon_j+g(1-\epsilon_j)\Big]\prod_{j=l+1}^k\Big[(m-g)(1-\epsilon_j)+g\epsilon_j\Big]
+\end{equation}
+where $m$ is the ploidy. For small $\{\epsilon_j\}$, the first-order approximation is
+\begin{eqnarray*}
+\mathcal{L}(g)&=&\left(1-\frac{g}{m}\right)^k\left(1-\frac{g}{m-g}\right)\left(\sum_{j=1}^l\epsilon_j-\sum_{j=l+1}^k\epsilon_j\right)\\
+&&+\left(\frac{g}{m}\right)^l\left(1-\frac{g}{m}\right)^{k-l}+o(\epsilon^2)
+\end{eqnarray*}
+Intuitively, the first term attempts to explain
+the deviation between $l/k$ and $g/m$ by sequencing errors, while
+the second term attempts to explain the deviation by imperfect sampling.
+
+%In particular, for a diploid sample ($m=2$), the likelihoods for $g=0,1,2$ are
+%\begin{eqnarray*}
+%\mathcal{L}(0)&=&\prod_{j=1}^l\epsilon_j\prod_{j=l+1}^k(1-\epsilon_j)\\
+%\mathcal{L}(1)&=&\frac{1}{2^k}\\
+%\mathcal{L}(2)&=&\prod_{j=1}^l(1-\epsilon_j)\prod_{j=l+1}^k\epsilon_j\\
+%\end{eqnarray*}
+
+\subsection{Maximum-likelihood inference}
+
+\subsubsection{Estimating the site allele frequency}
+In this section we estimate the reference allele frequency $\psi$.
+For the $i$-th sample, let $m_i$ be the ploidy, $g_i$ 
+the genotype and $d_i$ the sequencing data.
+Assuming Hardy-Weinberg equilibrium (HWE), we can compute the likelihood of $\psi$:
+\begin{equation}\label{equ:flk}
+\mathcal{L}(\psi)=\sum_{g_1}\cdots\sum_{g_n}\prod_i\Pr\{d_i,g_i|\psi\}=\prod_{i=1}^n\sum_{g=0}^{m_i}\mathcal{L}_i(g)f(g;m_i,\psi)
+\end{equation}
+where $\mathcal{L}_i(g_i)$ is computed by Eq.~\eqref{equ:glk} and
+\begin{equation}
+f(g;m,\psi)=\binom{m}{g}\psi^g(1-\psi)^{m-g}
+\end{equation}
+is the probability mass function of the binomial distribution ${\rm Binom}(m,\psi)$.
+
+Knowing the likelihood of $\psi$, we may directly find the max-likelihood estimate
+numerically with, for example, Brent's method~\citep{Brent:1973kx}. An alternative approach is to 
+infer with the estimation-maximization algorithm (EM), taking sample genotypes as missing data. Given
+we know the estimate $\psi^{(t)}$ at the $t$-th iteration, the estimate at the $(t+1)$-th
+iteration is
+\begin{equation}
+\psi^{(t+1)}=\frac{1}{M}\sum_{i=1}^n\frac{\sum_{g}g\mathcal{L}_i(g)f(g;m_i,\psi^{(t)})}{\sum_{g}\mathcal{L}_i(g)f(g;m_i,\psi^{(t)})}
+\end{equation}
+wheere $M=\sum_im_i$ is the total number of chromosomes in samples.
+
+When the signal from the data is strong, or equivalently for each $i$, one of $\mathcal{L}_i(g)$
+is much larger than others, the EM algorithm converges faster than the direct numerical
+solution using Brent's method. However, when the signal from the data is weak,
+Brent's method may converge faster than EM. In implementation, we apply 10 rounds of
+EM iterations. If the estimate does not converge after 10 rounds, we switch to Brent's method.
+
+\subsubsection{Estimating the genotype frequencies}
+In this section, we assume all samples have the same ploidy: $m=m_1=\cdots=m_n$
+and aim to estimate $\xi_g$, the frequency of genotype $g$. The likelihood
+of $\{\xi_0,\ldots,\xi_m\}$ is:
+\begin{equation}
+\mathcal{L}(\xi_0,\ldots,\xi_m)=\prod_{i=1}^n\sum_{g=0}^{m}\mathcal{L}_i(g)\xi_g
+\end{equation}
+with the constraint $\sum_g\xi_g=1$. The EM iteration equation is
+\begin{equation}
+\xi^{(t+1)}_g=\frac{1}{n}\sum_{i=1}^n\frac{\mathcal{L}_i(g)\xi^{(t)}_g}{\sum_{g'}\mathcal{L}_i(g')\xi_{g'}^{(t)}}
+\end{equation}
+
+An important application of estimaing the genotype frequencies is to test HWE for diploid samples ($m=2$).
+When genotypes are known, a common strategy is to take the frequency and perform a 1-degree $\chi^2$ test. This
+approach would not work well for sequencing data as it does not account for the uncertainty in
+genotypes especially when the average read depth of each individual is low. A more proper
+method is to perform a likelihood-ratio test. The test statistics is
+$$
+D=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
+$$
+which approximately follows the 1-degree $\chi^2$ distribution.
+It is easy to prove that when there is no uncertainty in data (i.e. for all $i$, there exists
+$g$ such that $\mathcal{L}_i(g)=1$), the likelihood-ratio test
+is reduced to the $\chi^2$ test using genotype data.
+
+\subsubsection{Estimating haplotype frequencies between loci}
+In this section, we assume all samples are diploid. Given $k$ loci,
+let $\vec{h}=(h_1,\ldots,h_k)$ be a haplotype where $h_j$ equals 1 if
+the allele at the $j$-th locus is identical to the reference, and equals 0 otherwise.
+Let $\eta_{\vec{h}}$ be the frequency of haplotype $\vec{h}$ satisfying
+$\sum_{\vec{h}}\eta_{\vec{h}}=1$, where
+$$
+\sum_{\vec{h}}\eta_{\vec{h}}=\sum_{h_1=0}^1\sum_{h_2=0}^1\cdots\sum_{h_k=0}^1\eta_{(h_1,\ldots,h_k)}
+$$
+Knowing the genotype likelihood at the $j$-th locus for the $i$-th individual $\mathcal{L}^{(j)}_i(g)$, we
+can compute the haplotype frequencies iteratively with:
+\begin{equation}\label{equ:hf}
+\eta^{(t+1)}_{\vec{h}}=\frac{\eta_{\vec{h}}^{(t)}}{n}\sum_{i=1}^n\frac{\sum_{\vec{h}'}\eta_{\vec{h'}}^{(t)}\prod_{j=1}^k\mathcal{L}^{(j)}_i(h_j+h'_j)}
+{\sum_{\vec{h}',\vec{h}''}\eta_{\vec{h'}}^{(t)}\eta_{\vec{h''}}^{(t)}\prod_{j}\mathcal{L}^{(j)}_i(h'_j+h''_j)}
+\end{equation}
+The time complexity of one iteration is $O(n\cdot 4^k)$ and thus
+it is impractical to estimate the haplotype frequency for many loci jointly.
+A typical use of Eq.~\eqref{equ:hf} is to measure linkage disequlibrium
+(LD) between two loci using the $r^2$ or $D'$ statistics.
+
+\subsubsection{Testing associations}
+Suppose we divide samples into two groups of size $n_1$ and $n-n_1$, respectively, and
+want to test if group 1 significantly differs from group 2. One possible test statistics
+could be
+\begin{equation}
+D=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}^{[1]}(\hat{\psi}^{[1]})\mathcal{L}^{[2]}(\hat{\psi}^{[2]})}
+\end{equation}
+where $\hat{\psi}$ is the max-likelihood estimate of the site allele frequency in all samples,
+and $\hat{\psi}^{[1]}$ and $\hat{\psi}^{[2]}$ are the estimates of allele frequency in group 1 and group 2, respectively.
+Under the null hypothesis, $D$ approximately follows the 1-degree $\chi^2$ distribution.
+We can prove that when there is no uncertainty in genotypes, the $D$ statistics
+is identical to the 1-degree $\chi^2$ statistics used in a genome-wide association study (GWAS).
+
+\subsubsection{Estimating the allele count}
+A major problem with Eq.~\eqref{equ:flk} is the assumption of HWE. This section
+shows an alternative approach without this assumption.
+
+For convenience, define random vector $\vec{G}=(G_1,\ldots,G_n)$ to be a genotype configuration.
+and $X=\sum_iG_i$ to be the number of reference alleles in all the samples.
+We have
+$$
+\Pr\{\vec{G}=\vec{g}|X=k\}=\delta_{k,s_n(\vec{g})}\prod_{i=1}^n\frac{\binom{m_i}{g_i}}{\binom{M}{k}}
+$$
+where $s_n(\vec{g})=\sum_i g_i$ is the total
+number of reference alleles in a genotype configuration $\vec{g}$, and $\delta_{kl}$ equals 1 if $k=l$
+and equals 0 otherwise. The likelihood of allele count is
+\begin{equation}\label{equ:klk}
+\mathcal{L}(k)=\Pr\{\vec{d}|X=k\}=\frac{1}{\binom{M}{k}}\sum_{g_1}\cdots\sum_{g_n}\delta_{k,s_n(\vec{g})}\prod_i\binom{m_i}{g_i}\mathcal{L}_i(g_i)
+\end{equation}
+where $\vec{d}=(d_1,\ldots,d_n)$ represents all sequencing data. To compute this probability efficiently, we define
+$$
+z_{jl}=\sum_{g_1=0}^{m_1}\cdots\sum_{g_j=0}^{m_j}\delta_{l,s_j(\vec{g})}\prod_{i=1}^j\binom{m_i}{g_i}\mathcal{L}_i(g_i)
+$$
+for $0\le l\le \sum_{i=1}^jm_i$ and $z_{jl}=0$ otherwise. $z_{jl}$
+can be calculated iteratively with
+\begin{equation}\label{equ:z}
+z_{jl}=\sum_{g_j=0}^{m_j}z_{j-1,l-g_j}\cdot\binom{m_j}{g_j}\mathcal{L}_j(g_j)
+\end{equation}
+starting from $z_{00}=1$. Comparing the defintion of $z_{nk}$ and Eq.~\eqref{equ:z}, we know that
+\begin{equation}\label{equ:klk2}
+\mathcal{L}(k)=\frac{z_{nk}}{\binom{M}{k}}
+\end{equation}
+which computes the likelihood of the allele count.
+
+Although the computation of the likelihood function $\mathcal{L}(k)$ is
+more complex than of $\mathcal{L}(\psi)$, $\mathcal{L}(k)$ does not requires
+HWE and can be computed for sample pools. It is a discrete function, which
+is more convenient when we want to compute the posterior. In fact,
+this section establishes the fundament of the Bayesian inference below.
+
+\subsubsection{Numerical stability of the allele count estimate}
+When computing $z_{jl}$ with Eq.~\eqref{equ:z}, floating point
+underflow may occur given large $j$. A more numerically stable approach is to
+compute $y_{jl}=z_{jl}/\binom{M_j}{l}$ instead, where
+$M_j=\sum_{i=1}^j m_i$. Thus
+\begin{equation}\label{equ:klky}
+\mathcal{L}(k)=y_{nk}
+\end{equation}
+and $y_{jk}$ can be computed iteratively with
+\begin{eqnarray}\label{equ:y}
+y_{jk}&=&\left(\prod_{l=0}^{m_j-1}\frac{k-l}{M_{j}-l}\right)\sum_{g_j=0}^{m_j}y_{j-1,k-g_j}\cdot\binom{m_j}{g_j}\mathcal{L}_j(g_j)\\\nonumber
+	&&\cdot\left(\prod_{l=g_j}^{m_j-1}\frac{M_{j-1}-k+l+1}{k-l}\right)
+\end{eqnarray}
+However, we note that $y_{jl}$ may decrease exponetially with increasing $j$. Floating point underflow
+may still occur. An even better solution is to
+rescale $y_{jl}$ for each $j$, similar to the treatment of the forward algorithm
+for Hidden Markov Models~\citep{Durbin:1998uq}. In practical implementation,
+we compute
+\begin{equation}
+\tilde{y}_{jl}=\frac{y_{jl}}{\prod_{j'=1}^jt_{j'}}
+\end{equation}
+where $t_{j}$ is chosen such that $\sum_{l}\tilde{y}_{jl}=1$.
+
+As another implementation note, most $y_{jl}$ are close to zero and
+thus $y_{nk}$ can be computed in a band rather than in a triangle. This
+may dramatically speed up the computation of the likelihood.
+
+\subsection{Bayesian inference}
+
+\subsubsection{Calling variants}
+In variant calling, we have a strong prior knowledge that at most of sites all samples only
+have the reference alelle. We will show that this prior plays an important role
+in reducing false positives.
+
+To utilize the prior knowledge, we prefer a Bayesian inference for variant calling.
+Let $\phi_k$, $k=1,\ldots,M$, be the probability of seeing $k$ reference alleles
+among $M$ chromosomes/haplotypes. For convenience, define $\Phi=\{\phi_k\}$, which
+is in fact the sample \emph{allele frequency spectrum} (AFS) for $M$ chromosomes. Recall
+that $X$ is the number of reference alleles in sample. The posterior of $X$ is
+$$
+\Pr\{X=k|\vec{d},\Phi\}=\frac{\phi_k\Pr\{\vec{d}|X=k\}}{\sum_l\phi_l\Pr\{\vec{d}|X=l\}}
+=\frac{\phi_k\mathcal{L}(k)}{\sum_l\phi_l\mathcal{L}(l)}
+$$
+where $\mathcal{L}(k)$ is defined by Eq.~\eqref{equ:klk} and computed by Eq.~\eqref{equ:klky}.
+In variant calling, we define \emph{variant quality} as
+$$
+Q_{\rm var}=-10\log_{10}\Big(1-\Pr\{X=M|\vec{d},\Phi\}\Big)
+$$
+and call the site as a variant if $Q_{\rm var}$ is large enough. Because in deriving
+$\mathcal{L}(k)$, we do not require the ploidy of each sample to be the same. The
+variant calling method described here are in theory applicable to pooled resequencing with unequal pool size.
+
+\subsubsection{Estimating sample allele frequency spectrum (AFS)}
+For variant calling, we typically take the Wright-Fisher AFS as the prior. We can also
+estimate the sample AFS with the maximum-likelihood inference when the Wright-Fisher prior
+deviates from the data.
+
+Suppose we have $L$ sites of interest and we want to estimate the frequency across these sites.
+Let $X_a$, $a=1,\ldots,L$, be the reference allele count at site $a$. We can use an EM algorithm
+to find $\Phi$ that maximizes $\Pr\{{\bf d}|\Phi\}$. The iteration equation is
+$$
+\phi_k^{(t+1)}=\frac{1}{L}\sum_a\Pr\{X_a=k|{\bf d},\Phi^{(t)}\}
+$$
+\subsubsection{Comparing two samples or two groups of samples}
+To compare two groups of samples, a useful distribution is the joint posterior distribution
+of allele counts in the two groups:
+\begin{eqnarray*}
+&&\Pr\{X^{[1]}=k^{[1]},X^{[2]}=k^{[2]}|d,\Phi\}\\
+&=&\frac{\phi_{k^{[1]}+k^{[2]}}\mathcal{L}^{[1]}(k^{[1]})\mathcal{L}^{[2]}(k^{[2]})}{\sum_l\phi_l\mathcal{L}(l)}
+\cdot\frac{\binom{M^{[1]}}{k^{[1]}}\binom{M^{[2]}}{k^{[2]}}}{\binom{M^{[1]}+M^{[1]}}{k^{[1]}+k^{[2]}}}
+\end{eqnarray*}
+With this posterior, we may compute the probability that a variant is
+present in one sample but absent from the other, which is important to
+the discovery of somatic mutations. It is also possible to derive association test
+statistics based the joint distribution.
+
+\end{methods}
+
+\section{RESULTS}
+\subsection{Implementation}
+Most of equations for diploid samples ($m=2$) have been efficiently implemented
+in the SAMtools software package, which is distributed under the MIT open source license,
+free to both academic and commercial uses.
+
+The SAMtools package consists of two key components {\tt samtools} and {\tt bcftools}.
+The former computes the genotype likelihood $\mathcal{L}(g)$ using an improved version of
+Eq.~\eqref{equ:glk} which considers error dependencies; the latter calls variants
+and infers various statistics decribed in this article. To clearly separate the two steps,
+we designed a new \emph{Binary variant call format} (BCF), which is the binary representation
+of the variant call format (VCF) and is more compact and much faster to process than VCF.
+On real data, computing genotype likelihoods especially for INDELs is typically 10 times slower than
+variant calling. The separation of genotype likelihood computation and subsequent
+inferences enhances the flexibility and improves the efficiency for inferring
+AFS. {\tt Bcftools} also directly works with VCF files, but is less efficient.
+
+\subsection{Calling SNPs for the 1000 Genomes pilot data}
+
+\subsection{Estimating site allele frequnecies}
+We downloaded European 
+
+\section{DISCUSSIONS}
+
+\section*{ACKNOWLEDGEMENTS}
+\paragraph{Funding\textcolon}
+\bibliography{samtools}
+
+\end{document}
