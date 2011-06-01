@@ -50,18 +50,62 @@ we will merely reconfirm information from other reads, but with more samples, we
 will greatly reduce the sampling fluctuations, gain power on variants present in
 multiple samples and get access to many more rare variants. On the other hand, sequencing
 errors counteract the power in variant calling, which necessitates a minimum coverage.
-The optimal balancing point is broadly regarded to be in the 2--6 fold range,
+The optimal balancing point is broadly regarded to be in the 2--6 fold range per sample,
 depending on the sequencing error rate, level of linkage disequilibrium (LD) and the
 aim of the project.
 
-A major concern with this design is that at 2--6 fold coverage, 
+A major concern with this design is that at 2--6 fold coverage per sample, non-reference alleles
+may not always be covered by sequence reads, especially at heterozygous loci. Calling
+variants from each individual and then combining the calls usually yield poor results.
+The preferred strategy is to enhance the power of variant discovery by jointly considering
+all samples. This strategy largely solves the variant discovery problem, but acquiring
+accurate genotypes for each individual remains unsolved. Without accurate genotypes,
+most of previous methods, for example testing Hardy-Weinberg equilibrium (HWE) and associations,
+would not work.
+
+To reuse the rich frameworks developed for genotyping data, the 1000 Genomes Project proposed to impute
+genotypes, utilizing linkage disequilibrium (LD) across loci.
+Suppose at a site $A$ a sample has low coverage.
+If some samples at $A$ have high coverage and there exists a site $B$ that is linked with $A$ and has
+sufficient sequence support, we can transfer information across sites and across individuals, and
+thus make a reliable inference for the low-coverage sample at site $A$. The overall genotype accuracy
+can be greatly improved.
+
+However, imputation is not without problems. Firstly, imputation cannot be used to infer
+the allele frequency spectrum (AFS), an important quantity in population genetics, because
+imputation as of now can only be applied to candidate variant sites, while we need to consider
+non-variants to infer AFS. Secondly, the effectiveness of imputation depends on the LD pattern, which
+leads to potential bias especially in population genetical studies. Thirdly, the current
+imputation algorithms are slow. For a thousand samples, the fastest algorithm is actually
+slower than read mapping algorithms, not to speak more accurate algorithms (H.M. Kang, personal communication).
+
+These potential concerns make us reconsider if imputation is always preferred. We notice that performing imputation
+mainly aims to reuse the methods developed for genotyping data,
+but would it be possible to derive new methods to solve classical medical or population genetical
+problems without precise genotypes? This article explores this direction. We will show
+in the following how to compute various statistics directly from sequencing data without
+knowing accurate genotypes. We will evaluate the accuracy of these statistics on large-scale
+real data and compare with imputation-based methods.
 
 \begin{methods}
 \section{METHODS}
-\subsection{Overview}
+This section presents the precise equations on how to infer various statistics such as
+the genotype frequency and AFS, and to perform various statistical test such as
+testing HWE and associations. Some of these equations have already been described
+in the existing literature, but for theoretical completeness, we give the equations
+using our notations. The last subsection reviews the existing methods and summarizes
+the differences between them, as well as between ours and existing formulation.
 
-\begin{table}[!htb]
-\processtable{Common notations}{\begin{tabular}{lp{7cm}}
+In the Methods section, we suppose there are $n$ individuals with the $i$-th
+individual having $m_i$ ploidy. The sequence data for the $i$-th individual is
+represented as $d_i$ and the genotype is $g_i$ which is an integer in $[0,m_i]$,
+equal to the number of reference alleles in the individual.
+Table~1 %~\ref{tab:notation}
+gives notations common across this Methods section.
+
+\begin{table}[!htb]\label{tab:notation}
+\processtable{Common notations}
+{\begin{tabular}{lp{7cm}}
 \toprule
 Symbol & Description \\
 \midrule
@@ -78,8 +122,6 @@ $\mathcal{L}_i(\theta)$ & Likelihood function for the $i$-th sample: $\mathcal{L
 \end{table}
 
 \subsection{Assumptions}
-
-To derive the probabilistic framework, we have to make several assumptions.
 
 \subsubsection{Site independency} We assume data at different sites are independent.
 This is frequently not true in real data because sequencing and mapping are context
@@ -182,14 +224,14 @@ An important application of estimaing the genotype frequencies is to test HWE fo
 When genotypes are known, a common strategy is to take the frequency and perform a 1-degree $\chi^2$ test. This
 approach would not work well for sequencing data as it does not account for the uncertainty in
 genotypes especially when the average read depth of each individual is low. A more proper
-method is to perform a likelihood-ratio test. The test statistics is
+method is to perform a likelihood-ratio test. The test statistic is
 $$
-D=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
+D_e=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
 $$
 which approximately follows the 1-degree $\chi^2$ distribution.
 It is easy to prove that when there is no uncertainty in data (i.e. for all $i$, there exists
 $g$ such that $\mathcal{L}_i(g)=1$), the likelihood-ratio test
-is reduced to the $\chi^2$ test using genotype data.
+is approximately reduced to the $\chi^2$ test using genotype data.
 
 \subsubsection{Estimating haplotype frequencies between loci}
 In this section, we assume all samples are diploid. Given $k$ loci,
@@ -209,20 +251,44 @@ can compute the haplotype frequencies iteratively with:
 The time complexity of one iteration is $O(n\cdot 4^k)$ and thus
 it is impractical to estimate the haplotype frequency for many loci jointly.
 A typical use of Eq.~\eqref{equ:hf} is to measure linkage disequlibrium
-(LD) between two loci using the $r^2$ or $D'$ statistics.
+(LD) between two loci using the $r^2$ or $D'$ statistic.
 
 \subsubsection{Testing associations}
 Suppose we divide samples into two groups of size $n_1$ and $n-n_1$, respectively, and
-want to test if group 1 significantly differs from group 2. One possible test statistics
+want to test if group 1 significantly differs from group 2. One possible test statistic
 could be
 \begin{equation}
-D=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}^{[1]}(\hat{\psi}^{[1]})\mathcal{L}^{[2]}(\hat{\psi}^{[2]})}
+D_a=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}^{[1]}(\hat{\psi}^{[1]})\mathcal{L}^{[2]}(\hat{\psi}^{[2]})}
 \end{equation}
-where $\hat{\psi}$ is the max-likelihood estimate of the site allele frequency in all samples,
+where
+\[
+\hat{\psi}=\argmax_{\psi}\mathcal{L}(\psi)
+\]
+is the max-likelihood estimate of the site allele frequency in all samples,
 and $\hat{\psi}^{[1]}$ and $\hat{\psi}^{[2]}$ are the estimates of allele frequency in group 1 and group 2, respectively.
 Under the null hypothesis, $D$ approximately follows the 1-degree $\chi^2$ distribution.
-We can prove that when there is no uncertainty in genotypes, the $D$ statistics
-is identical to the 1-degree $\chi^2$ statistics used in a genome-wide association study (GWAS).
+We can prove that when there is no uncertainty in genotypes, the $D$ statistic
+is approximate to the 1-degree $\chi^2$ statistic used in a genome-wide association study (GWAS).
+
+\subsubsection{Testing genotype identity between two samples}
+One of the key goals in cancer resequencing is to identify the somatic mutations
+between a normal-tumor sample pair, which can also achieved by a likelihood ratio test.
+Given a pair of samples, the test statistic is:
+\begin{equation}
+D_p=-2\log\frac{\mathcal{L}^{[1]}(\hat{g})\mathcal{L}^{[2]}(\hat{g})}{\mathcal{L}^{[1]}(\hat{g}^{[1]})\mathcal{L}^{[2]}(\hat{g}^{[2]})}
+\end{equation}
+where $\mathcal{L}^{[\cdot]}(g)$ is computed by Eq.~\eqref{equ:glk}, $\hat{g}$
+maximizes $\mathcal{L}^{[1]}(g)\mathcal{L}^{[2]}(g)$, and similarly $\hat{g}^{[1]}$
+and $\hat{g}^{[2]}$ maximize $\mathcal{L}^{[1]}(g)$ and $\mathcal{L}^{[2]}(g)$, respectively.
+
+Note that in the majority of practical cases, $\hat{g}$ equals either $\hat{g}^{[1]}$ or $\hat{g}^{[2]}$.
+When this stands, we can prove:
+$$
+D_p=2\log\left\{ \min\left\{\frac{\mathcal{L}^{[1]}(\hat{g}^{[1]})}{\mathcal{L}^{[1]}(\hat{g}^{[2]})},\frac{\mathcal{L}^{[2]}(\hat{g}^{[2]})}{\mathcal{L}^{[2]}(\hat{g}^{[1]})}\right\}\right\}
+$$
+This equation has an intutive interpretation: we are certain about
+a candidate somatic mutation only if both the normal and tumor genotypes
+are clearly better than other possible genotypes.
 
 \subsubsection{Estimating the allele count}
 A major problem with Eq.~\eqref{equ:flk} is the assumption of HWE. This section
@@ -321,9 +387,13 @@ deviates from the data.
 Suppose we have $L$ sites of interest and we want to estimate the frequency across these sites.
 Let $X_a$, $a=1,\ldots,L$, be the reference allele count at site $a$. We can use an EM algorithm
 to find $\Phi$ that maximizes $\Pr\{{\bf d}|\Phi\}$. The iteration equation is
-$$
+\begin{equation}\label{eq:afs}
 \phi_k^{(t+1)}=\frac{1}{L}\sum_a\Pr\{X_a=k|{\bf d},\Phi^{(t)}\}
-$$
+\end{equation}
+We call this method of estimating AFS as \emph{EM-AFS}. Alternatively, we may also acquire the max-likelihood
+estimate of the allele count at each site using Eq.~\eqref{equ:klk2}. The normalized histogram of these counts
+gives the AFS. We call this method as \emph{site-AFS}. We will compare the two methods in the Results section.
+
 \subsubsection{Comparing two samples or two groups of samples}
 To compare two groups of samples, a useful distribution is the joint posterior distribution
 of allele counts in the two groups:
@@ -333,10 +403,11 @@ of allele counts in the two groups:
 \cdot\frac{\binom{M^{[1]}}{k^{[1]}}\binom{M^{[2]}}{k^{[2]}}}{\binom{M^{[1]}+M^{[1]}}{k^{[1]}+k^{[2]}}}
 \end{eqnarray*}
 With this posterior, we may compute the probability that a variant is
-present in one sample but absent from the other, which is important to
-the discovery of somatic mutations. It is also possible to derive association test
-statistics based the joint distribution.
+present in one sample but absent from the other, such as for the discovery
+of somatic mutations between a normal-tumor sample pair. It is also possible to derive association test
+statistic based the joint distribution.
 
+\subsection{Historical works}
 \end{methods}
 
 \section{RESULTS}
@@ -357,6 +428,24 @@ inferences enhances the flexibility and improves the efficiency for inferring
 AFS. {\tt Bcftools} also directly works with VCF files, but is less efficient.
 
 \subsection{Calling SNPs for the 1000 Genomes pilot data}
+\begin{figure*}[!htb]
+\centering
+\includegraphics[height=4.1cm]{ac-CEUp}\includegraphics[height=4.1cm]{ld-CEUp}\includegraphics[height=4.1cm]{at-CEU}
+\end{figure*}
+
+\subsection{Inferring the allele frequency spectrum}
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=.40\textwidth]{afs-cmp}
+\caption{The derived AFS conditional on heterozygotes discovered in the NA18507
+genome. Heterozygotes were called with SAMtools on BWA alignment
+(AC:SRA000271).  The ancestral sequences were determined from the Ensembl EPO
+alignment, with the requirement of the chimpanzee and orangutan sequences being
+identical.  The AFS at these hets were computed a) from the 9 independent Yoruba
+individuals resequenced by Complete Genomics; b) from 9 random Pilot-1 Yobuba
+individuals released by the 1000 Genomes Project using EM-AFS and c) from the
+same 9 Pilot-1 individuals using site-AFS.}
+\end{figure}
 
 \subsection{Estimating site allele frequnecies}
 We downloaded European 
