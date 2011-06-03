@@ -9,26 +9,31 @@ set log x
 set size 1, 0.9
 set pointsize 1.5
 
-set key bot right
-set ytics 0.1
-set xlab "# non-reference alleles"
-set ylab "Accumulative Spearman's r"
-plot "<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f5,6|luajit r-plot.lua" u 1:3 t 'Beagle imputation' w lp ls 1, \
-	"<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f5,7|luajit r-plot.lua" u 1:3 t 'ML estimate' w lp ls 2
+#set yran [0:*]
+#set key bot left
+#set ytics 0.2
+#set xlab "# non-reference alleles computed from Omni genotypes"
+#plot "<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f5,6|luajit rms-ac.lua 15" t 'Beagle imputation' w lp ls 1, \
+#	"<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f5,7|luajit rms-ac.lua 15" t 'ML estimate' w lp ls 2
 
-set out "ac-EUR1.eps"
-plot "<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0'|cut -f5,6|luajit r-plot.lua" u 1:3 t 'Beagle imputation' w lp ls 1, \
-	"<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0'|cut -f5,7|luajit r-plot.lua" u 1:3 t 'ML estimate' w lp ls 2
+#set out "ac-EUR1.eps"
+#plot "<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0'|cut -f5,6|luajit rms-ac.lua 15|awk 'NR>1'" t 'Beagle imputation' w lp ls 1, \
+#	"<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0'|cut -f5,7|luajit rms-ac.lua 15|awk 'NR>1'" t 'ML estimate' w lp ls 2
 
-set ytics 0.05
+unset log x
+set yran [*:*]
+set ytics 1
+set key top right
 set out "ld-CEUp.eps"
-set xlab "maximum r-square to nearby SNPs"
-plot "<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f3,5,6|luajit r-plot.ld.lua 40" u 1:2 t 'Beagle imputation' w lp ls 1, \
-	"<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f3,5,7|luajit r-plot.ld.lua 40" u 1:2 t 'ML estimate' w lp ls 2
+set xlab "maximum imputed r-square to nearby SNPs"
+set ylab "Root-mean-square deviation"
+plot "<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f3,5,6|luajit rms-ld.lua" t 'Beagle imputation' w lp ls 1, \
+	"<bzip2 -dc pilot-cmp.txt.bz2|awk '$4==98&&$5>0'|cut -f3,5,7|luajit rms-ld.lua" t 'ML estimate' w lp ls 2
 
+set yran [*:*]
 set out "ld-EUR1.eps"
-plot "<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0'|cut -f3,5,6|luajit r-plot.ld.lua 40" u 1:2 t 'Beagle imputation' w lp ls 1, \
-	"<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0'|cut -f3,5,7|luajit r-plot.ld.lua 40" u 1:2 t 'ML estimate' w lp ls 2
+plot "<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0{print $3,$5,$6}'|luajit rms-ld.lua" t 'Beagle imputation' w lp ls 1, \
+	"<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0{if($7==0)$7=1;print $3,$5,$7}'|luajit rms-ld.lua" t 'ML estimate' w lp ls 2
 
 set out "at-CEU.eps"
 unset log y
@@ -41,4 +46,4 @@ set key top left
 f(x) = x
 set xlab "Expected -log10(P-value)"
 set ylab "Observed -log10(P-value)"
-plot "<cat bgl.qq|awk 'rand()<0.0001/(10**(-$1))'" t 'Imputation' ls 1, "<cat bcf.qq|awk 'rand()<0.0001/(10**(-$1))'" t 'LRT' ls 2, f(x) t '' 2
+plot "<cat bgl.qq|awk 'rand()<0.0001/(10**(-$1))'" t 'Imputation' ls 1, "<cat bcf-f.qq|awk 'rand()<0.0001/(10**(-$1))'" t 'LRT' ls 2, f(x) t '' 2

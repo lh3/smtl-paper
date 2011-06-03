@@ -6,18 +6,20 @@ for l in io.lines() do
 end
 table.sort(a, function(a,b) return a[1] < b[1] or (a[1]==b[1] and a[2]<b[2]) end)
 
-local rest, e = #a, 0
+local rest, b, e = #a, 1, 0
 for i = n, 1, -1 do
-	local x, z = {}, math.floor(rest / i);
+	local z = math.floor(rest / i);
 	local y = a[e+z][1]
 	while e + z <= #a and a[e+z][1] == y do
 		z = z + 1
 	end
 	z = z - 1
 	e = e + z
-	for k = 1, e do
-		x[k] = {a[k][1], a[k][2]}
+	local x, c = 0, 0
+	for k = b, e do
+		x = x + (a[k][2]-a[k][1]) * (a[k][2]-a[k][1]) / a[k][1]
+		c = c + 1
 	end
-	print(x[e][1], math.pearson(x), math.spearman(x))
-	rest = rest - z
+	print(a[e][1], math.sqrt(x / c))
+	rest, b = rest - z, e + 1
 end

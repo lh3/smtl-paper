@@ -1,6 +1,6 @@
 \documentclass{bioinfo}
-\copyrightyear{2009}
-\pubyear{2009}
+\copyrightyear{2011}
+\pubyear{2011}
 
 \usepackage{natbib}
 \bibliographystyle{apalike}
@@ -42,7 +42,7 @@ based method on population parameter estimate, yet 60X faster and less affected 
 
 \section{INTRODUCTION}
 
-The 1000 Genomes Project sets an excellent example on how to design a sequencing project to
+The 1000 Genomes Project~\citep{1000-Genomes-Project-Consortium:2010qc} sets an excellent example on how to design a sequencing project to
 get the maximum output relating human populations. An important lesson from this project
 is to sequence many human samples at relatively low coverage instead of
 few samples at very high coverage. This is because with higher coverage,
@@ -50,7 +50,7 @@ we will merely reconfirm information from other reads, but with more samples, we
 will greatly reduce the sampling fluctuations, gain power on variants present in
 multiple samples and get access to many more rare variants. On the other hand, sequencing
 errors counteract the power in variant calling, which necessitates a minimum coverage.
-The optimal balancing point is broadly regarded to be in the 2--6 fold range per sample,
+The optimal balancing point is broadly regarded to be in the 2--6 fold range per sample~\citep{Le:2010uq,Li:2011fk},
 depending on the sequencing error rate, level of linkage disequilibrium (LD) and the
 aim of the project.
 
@@ -58,14 +58,14 @@ A major concern with this design is that at 2--6 fold coverage per sample, non-r
 may not always be covered by sequence reads, especially at heterozygous loci. Calling
 variants from each individual and then combining the calls usually yield poor results.
 The preferred strategy is to enhance the power of variant discovery by jointly considering
-all samples. This strategy largely solves the variant discovery problem, but acquiring
+all samples~\citep{Le:2010uq,Li:2011fk,Depristo:2011vn,Nielsen:2011fk}. This strategy largely solves the variant discovery problem, but acquiring
 accurate genotypes for each individual remains unsolved. Without accurate genotypes,
 most of previous methods, for example testing Hardy-Weinberg equilibrium (HWE) and associations,
 would not work.
 
 To reuse the rich frameworks developed for genotyping data, the 1000 Genomes Project proposed to impute
-genotypes, utilizing linkage disequilibrium (LD) across loci.
-Suppose at a site $A$ a sample has low coverage.
+genotypes~\citep{Li:2009gb,Browning:2009jl,Howie:2009mb,Li:2010ky}, utilizing LD across loci.
+Suppose at a site $A$, a sample has low coverage.
 If some samples at $A$ have high coverage and there exists a site $B$ that is linked with $A$ and has
 sufficient sequence support, we can transfer information across sites and across individuals, and
 thus make a reliable inference for the low-coverage sample at site $A$. The overall genotype accuracy
@@ -77,7 +77,7 @@ imputation as of now can only be applied to candidate variant sites, while we ne
 non-variants to infer AFS. Secondly, the effectiveness of imputation depends on the LD pattern, which
 leads to potential bias especially in population genetical studies. Thirdly, the current
 imputation algorithms are slow. For a thousand samples, the fastest algorithm is actually
-slower than read mapping algorithms, not to speak more accurate algorithms (H.M. Kang, personal communication).
+slower than read mapping algorithms, not to speak more accurate algorithms (Hyun Min Kang, personal communication).
 
 These potential concerns make us reconsider if imputation is always preferred. We notice that performing imputation
 mainly aims to reuse the methods developed for genotyping data,
@@ -101,7 +101,8 @@ individual having $m_i$ ploidy. The sequence data for the $i$-th individual is
 represented as $d_i$ and the genotype is $g_i$ which is an integer in $[0,m_i]$,
 equal to the number of reference alleles in the individual.
 Table~1 %~\ref{tab:notation}
-gives notations common across this Methods section.
+gives notations common across this Methods section. The detailed derivation of
+the equations in this article is presented in an online document (http://bit.ly/stmath).
 
 \begin{table}[!htb]\label{tab:notation}
 \processtable{Common notations}
@@ -197,7 +198,7 @@ numerically with, for example, Brent's method~\citep{Brent:1973kx}. An alternati
 infer with the estimation-maximization algorithm (EM), taking sample genotypes as missing data. Given
 we know the estimate $\psi^{(t)}$ at the $t$-th iteration, the estimate at the $(t+1)$-th
 iteration is
-\begin{equation}
+\begin{equation}\label{eq:saf-em}
 \psi^{(t+1)}=\frac{1}{M}\sum_{i=1}^n\frac{\sum_{g}g\mathcal{L}_i(g)f(g;m_i,\psi^{(t)})}{\sum_{g}\mathcal{L}_i(g)f(g;m_i,\psi^{(t)})}
 \end{equation}
 wheere $M=\sum_im_i$ is the total number of chromosomes in samples.
@@ -205,7 +206,7 @@ wheere $M=\sum_im_i$ is the total number of chromosomes in samples.
 When the signal from the data is strong, or equivalently for each $i$, one of $\mathcal{L}_i(g)$
 is much larger than others, the EM algorithm converges faster than the direct numerical
 solution using Brent's method. However, when the signal from the data is weak,
-Brent's method may converge faster than EM. In implementation, we apply 10 rounds of
+Brent's method may converge faster than EM (Rasmus Nielsen, personal communication). In implementation, we apply 10 rounds of
 EM iterations. If the estimate does not converge after 10 rounds, we switch to Brent's method.
 
 \subsubsection{Estimating the genotype frequencies}
@@ -216,7 +217,7 @@ of $\{\xi_0,\ldots,\xi_m\}$ is:
 \mathcal{L}(\xi_0,\ldots,\xi_m)=\prod_{i=1}^n\sum_{g=0}^{m}\mathcal{L}_i(g)\xi_g
 \end{equation}
 with the constraint $\sum_g\xi_g=1$. The EM iteration equation is
-\begin{equation}
+\begin{equation}\label{eq:sgf-em}
 \xi^{(t+1)}_g=\frac{1}{n}\sum_{i=1}^n\frac{\mathcal{L}_i(g)\xi^{(t)}_g}{\sum_{g'}\mathcal{L}_i(g')\xi_{g'}^{(t)}}
 \end{equation}
 
@@ -228,10 +229,15 @@ method is to perform a likelihood-ratio test. The test statistic is
 $$
 D_e=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
 $$
-which approximately follows the 1-degree $\chi^2$ distribution.
-It is easy to prove that when there is no uncertainty in data (i.e. for all $i$, there exists
+where
+\begin{equation}\label{eq:psimax}
+\hat{\psi}=\argmax_{\psi}\mathcal{L}(\psi)
+\end{equation}
+is the max-likelihood estimate of the site allele frequency.
+The $D_e$ statistic approximately follows the 1-degree $\chi^2$ distribution.
+It is easy to prove that when sample genotypes are all certain (i.e. for all $i$, there exists
 $g$ such that $\mathcal{L}_i(g)=1$), the likelihood-ratio test
-is approximately reduced to the $\chi^2$ test using genotype data.
+is approximate to the $\chi^2$ test using genotype data.
 
 \subsubsection{Estimating haplotype frequencies between loci}
 In this section, we assume all samples are diploid. Given $k$ loci,
@@ -248,7 +254,10 @@ can compute the haplotype frequencies iteratively with:
 \eta^{(t+1)}_{\vec{h}}=\frac{\eta_{\vec{h}}^{(t)}}{n}\sum_{i=1}^n\frac{\sum_{\vec{h}'}\eta_{\vec{h'}}^{(t)}\prod_{j=1}^k\mathcal{L}^{(j)}_i(h_j+h'_j)}
 {\sum_{\vec{h}',\vec{h}''}\eta_{\vec{h'}}^{(t)}\eta_{\vec{h''}}^{(t)}\prod_{j}\mathcal{L}^{(j)}_i(h'_j+h''_j)}
 \end{equation}
-The time complexity of one iteration is $O(n\cdot 4^k)$ and thus
+When sample genotypes are all certain, this EM iteration is reduced to the standard EM for estimating
+haplotype frequencies using genotype data~\citep{Excoffier:1995ly}.
+
+The time complexity of computing Eq.~\eqref{equ:hf} is $O(n\cdot 4^k)$ and thus
 it is impractical to estimate the haplotype frequency for many loci jointly.
 A typical use of Eq.~\eqref{equ:hf} is to measure linkage disequlibrium
 (LD) between two loci using the $r^2$ or $D'$ statistic.
@@ -257,22 +266,31 @@ A typical use of Eq.~\eqref{equ:hf} is to measure linkage disequlibrium
 Suppose we divide samples into two groups of size $n_1$ and $n-n_1$, respectively, and
 want to test if group 1 significantly differs from group 2. One possible test statistic
 could be
-\begin{equation}
-D_a=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}^{[1]}(\hat{\psi}^{[1]})\mathcal{L}^{[2]}(\hat{\psi}^{[2]})}
+\begin{equation}\label{eq:asso1}
+D_{a1}=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}^{[1]}(\hat{\psi}^{[1]})\mathcal{L}^{[2]}(\hat{\psi}^{[2]})}
 \end{equation}
-where
-\[
-\hat{\psi}=\argmax_{\psi}\mathcal{L}(\psi)
-\]
-is the max-likelihood estimate of the site allele frequency in all samples,
+where $\hat{\psi}$ is the max-likelihood estimate of the site allele frequency of all samples (Eq.~\eqref{eq:psimax}),
 and $\hat{\psi}^{[1]}$ and $\hat{\psi}^{[2]}$ are the estimates of allele frequency in group 1 and group 2, respectively.
 Under the null hypothesis, $D$ approximately follows the 1-degree $\chi^2$ distribution.
-We can prove that when there is no uncertainty in genotypes, the $D$ statistic
-is approximate to the 1-degree $\chi^2$ statistic used in a genome-wide association study (GWAS).
+
+A potential concern with the $D_{a1}$ statistic is that $\mathcal{L}(\psi)$ assumes HWE.
+When HWE is violated, false positives may arise~\citep{Nielsen:2011fk}. For diploid samples, a safer statistic is
+$$
+D_{a2}=-2\log\frac{\mathcal{L}(\hat{\xi}_0,\hat{\xi_1},\hat{\xi}_2)}
+{\mathcal{L}^{[1]}(\hat{\xi}_0^{[1]},\hat{\xi}_1^{[1]},\hat{\xi}_2^{[1]})\mathcal{L}^{[2]}(\hat{\xi}_0^{[2]},\hat{\xi}_1^{[2]},\hat{\xi}_2^{[2]})}
+$$
+which in principle follows the 2-degree $\chi^2$ distribution under the null hypothesis.
+However, when both cases and controls are in HWE, the degree of freedom is reduced and this
+statistic is underpowered.
+
+We have not found a powerful test statistic robust to HWE violation. For
+practical applications, we propose to take the P-value computed with $D_{a1}$, while
+filtering candidates having a low $D_{a2}$ to reduce false positives caused
+by HWE violation (see Results).
 
 \subsubsection{Testing genotype identity between two samples}
 One of the key goals in cancer resequencing is to identify the somatic mutations
-between a normal-tumor sample pair, which can also achieved by a likelihood ratio test.
+between a normal-tumor sample pair~\citep{Robison:2010ys}, which can also achieved by a likelihood ratio test.
 Given a pair of samples, the test statistic is:
 \begin{equation}
 D_p=-2\log\frac{\mathcal{L}^{[1]}(\hat{g})\mathcal{L}^{[2]}(\hat{g})}{\mathcal{L}^{[1]}(\hat{g}^{[1]})\mathcal{L}^{[2]}(\hat{g}^{[2]})}
@@ -287,16 +305,13 @@ $$
 D_p=2\log\left\{ \min\left\{\frac{\mathcal{L}^{[1]}(\hat{g}^{[1]})}{\mathcal{L}^{[1]}(\hat{g}^{[2]})},\frac{\mathcal{L}^{[2]}(\hat{g}^{[2]})}{\mathcal{L}^{[2]}(\hat{g}^{[1]})}\right\}\right\}
 $$
 This equation has an intutive interpretation: we are certain about
-a candidate somatic mutation only if both the normal and tumor genotypes
+a candidate somatic mutation only if both the genotypes in both samples
 are clearly better than other possible genotypes.
 
 \subsubsection{Estimating the allele count}
-A major problem with Eq.~\eqref{equ:flk} is the assumption of HWE. This section
-shows an alternative approach without this assumption.
-
 For convenience, define random vector $\vec{G}=(G_1,\ldots,G_n)$ to be a genotype configuration.
 and $X=\sum_iG_i$ to be the number of reference alleles in all the samples.
-We have
+Assuming HWE, we have
 $$
 \Pr\{\vec{G}=\vec{g}|X=k\}=\delta_{k,s_n(\vec{g})}\prod_{i=1}^n\frac{\binom{m_i}{g_i}}{\binom{M}{k}}
 $$
@@ -307,9 +322,9 @@ and equals 0 otherwise. The likelihood of allele count is
 \mathcal{L}(k)=\Pr\{\vec{d}|X=k\}=\frac{1}{\binom{M}{k}}\sum_{g_1}\cdots\sum_{g_n}\delta_{k,s_n(\vec{g})}\prod_i\binom{m_i}{g_i}\mathcal{L}_i(g_i)
 \end{equation}
 where $\vec{d}=(d_1,\ldots,d_n)$ represents all sequencing data. To compute this probability efficiently, we define
-$$
+\begin{equation}\label{eq:z-def}
 z_{jl}=\sum_{g_1=0}^{m_1}\cdots\sum_{g_j=0}^{m_j}\delta_{l,s_j(\vec{g})}\prod_{i=1}^j\binom{m_i}{g_i}\mathcal{L}_i(g_i)
-$$
+\end{equation}
 for $0\le l\le \sum_{i=1}^jm_i$ and $z_{jl}=0$ otherwise. $z_{jl}$
 can be calculated iteratively with
 \begin{equation}\label{equ:z}
@@ -322,10 +337,9 @@ starting from $z_{00}=1$. Comparing the defintion of $z_{nk}$ and Eq.~\eqref{equ
 which computes the likelihood of the allele count.
 
 Although the computation of the likelihood function $\mathcal{L}(k)$ is
-more complex than of $\mathcal{L}(\psi)$, $\mathcal{L}(k)$ does not requires
-HWE and can be computed for sample pools. It is a discrete function, which
-is more convenient when we want to compute the posterior. In fact,
-this section establishes the fundament of the Bayesian inference below.
+more complex than of $\mathcal{L}(\psi)$, $\mathcal{L}(k)$ is discrete, which
+is more convenient to maximize or sum over. This likelihood function
+estabilishes the fundament of the Bayesian inference.
 
 \subsubsection{Numerical stability of the allele count estimate}
 When computing $z_{jl}$ with Eq.~\eqref{equ:z}, floating point
@@ -345,7 +359,7 @@ may still occur. An even better solution is to
 rescale $y_{jl}$ for each $j$, similar to the treatment of the forward algorithm
 for Hidden Markov Models~\citep{Durbin:1998uq}. In practical implementation,
 we compute
-\begin{equation}
+\begin{equation}\label{eq:rescale}
 \tilde{y}_{jl}=\frac{y_{jl}}{\prod_{j'=1}^jt_{j'}}
 \end{equation}
 where $t_{j}$ is chosen such that $\sum_{l}\tilde{y}_{jl}=1$.
@@ -366,10 +380,10 @@ Let $\phi_k$, $k=1,\ldots,M$, be the probability of seeing $k$ reference alleles
 among $M$ chromosomes/haplotypes. For convenience, define $\Phi=\{\phi_k\}$, which
 is in fact the sample \emph{allele frequency spectrum} (AFS) for $M$ chromosomes. Recall
 that $X$ is the number of reference alleles in sample. The posterior of $X$ is
-$$
+\begin{equation}\label{eq:post}
 \Pr\{X=k|\vec{d},\Phi\}=\frac{\phi_k\Pr\{\vec{d}|X=k\}}{\sum_l\phi_l\Pr\{\vec{d}|X=l\}}
 =\frac{\phi_k\mathcal{L}(k)}{\sum_l\phi_l\mathcal{L}(l)}
-$$
+\end{equation}
 where $\mathcal{L}(k)$ is defined by Eq.~\eqref{equ:klk} and computed by Eq.~\eqref{equ:klky}.
 In variant calling, we define \emph{variant quality} as
 $$
@@ -379,7 +393,7 @@ and call the site as a variant if $Q_{\rm var}$ is large enough. Because in deri
 $\mathcal{L}(k)$, we do not require the ploidy of each sample to be the same. The
 variant calling method described here are in theory applicable to pooled resequencing with unequal pool size.
 
-\subsubsection{Estimating sample allele frequency spectrum (AFS)}
+\subsubsection{Estimating the sample allele frequency spectrum (AFS)}
 For variant calling, we typically take the Wright-Fisher AFS as the prior. We can also
 estimate the sample AFS with the maximum-likelihood inference when the Wright-Fisher prior
 deviates from the data.
@@ -407,38 +421,76 @@ present in one sample but absent from the other, such as for the discovery
 of somatic mutations between a normal-tumor sample pair. It is also possible to derive association test
 statistic based the joint distribution.
 
-\subsection{Historical works}
+\subsection{Related works}
+During SNP calling, Thunder~\citep{Li:2011fk} and glfMultiples (http://bit.ly/glfmulti) compute
+the site allele frequency by numerically maximizing the likelihood, assuming HWE (Eq.~\eqref{equ:glk}). Genome Analysis Toolkit
+(GATK; \citealp{Depristo:2011vn}) infers the frequency with EM (Eq.~\eqref{eq:saf-em}).
+\citet{Li:2010ys} derived an alternative method to estimate the site allele frequency, which
+is not covered in this article.
+SeqEM~\citep{Martin:2010dz}
+estimates the genotype frequency using EM (Eq.~\eqref{eq:sgf-em}) with a different parameterization.
+\citet{Le:2010uq} derived Eq.~\eqref{equ:klk2}. The conclusion is correct, but the derivation is not
+rigorous: the binomial coefficient in Eq.~\eqref{equ:klk} was left out.
+\citet{Yi:2010zr} came to a similar set of equations to Eq.~\eqref{equ:z} and \eqref{eq:post}, but
+the prior is taken from the estimated site allele frequency.
+To the best of our knowledge, \citet{Kim:2010ve} is the first to use genotype likelihood based
+LRT to compute P-value of associations (Eq.~\eqref{eq:asso1}). \citet{Nielsen:2011fk}
+further proposed to test associations with a score test~\citep{Schaid:2002qf}.
+Except \citet{Kim:2010ve}, all the previous works focus on diploid samples, while many equations
+in this article can be in theory applied to multi-ploidy samples and pooled samples.
+
 \end{methods}
 
 \section{RESULTS}
 \subsection{Implementation}
 Most of equations for diploid samples ($m=2$) have been efficiently implemented
-in the SAMtools software package, which is distributed under the MIT open source license,
-free to both academic and commercial uses.
+in the SAMtools software package~\citep{Li:2009ys}, which is distributed under the MIT open source license,
+free to both academic and commercial uses. Eq.~\eqref{equ:klky}--\eqref{eq:rescale}
+have also been implemented in GATK as the default SNP calling model.
 
 The SAMtools package consists of two key components {\tt samtools} and {\tt bcftools}.
 The former computes the genotype likelihood $\mathcal{L}(g)$ using an improved version of
 Eq.~\eqref{equ:glk} which considers error dependencies; the latter calls variants
 and infers various statistics decribed in this article. To clearly separate the two steps,
 we designed a new \emph{Binary variant call format} (BCF), which is the binary representation
-of the variant call format (VCF) and is more compact and much faster to process than VCF.
+of the variant call format (VCF; http://bit.ly/vcfspec) and is more compact and much faster to process than VCF.
 On real data, computing genotype likelihoods especially for INDELs is typically 10 times slower than
 variant calling. The separation of genotype likelihood computation and subsequent
 inferences enhances the flexibility and improves the efficiency for inferring
 AFS. {\tt Bcftools} also directly works with VCF files, but is less efficient.
 
-\subsection{Calling SNPs for the 1000 Genomes pilot data}
-\begin{figure*}[!htb]
+\subsection{Inferring the site allele count}
+
+\begin{figure}[!htb]
 \centering
-\includegraphics[height=4.1cm]{ac-CEUp}\includegraphics[height=4.1cm]{ld-CEUp}\includegraphics[height=4.1cm]{at-CEU}
-\end{figure*}
+%\includegraphics[width=.40\textwidth]{ac-CEUp}\\
+\includegraphics[width=.40\textwidth]{ld-CEUp}
+%\subfloat[][]{\includegraphics[height=4.1cm]{at-CEU}}
+\caption{Accuracy of the site allele count estimate. The site allele count
+is estimated with Beagle imputation (solid line) and with Eq.~\eqref{equ:klk2} (dashed line)
+at sites typed by the Omni genotyping chip. (a) Correlation with the Omni allele count
+as a function of allele count. Sites are ordered by the number of non-reference alleles
+computed from the Omni genotypes and approximately evenly divided into 30 bins.
+Spearman's correlation coefficient is computed accumulatively for each bin together
+with all bins corresponding to smaller allele counts. (b) Correlation with Omni allele count
+as a function of the maximum $r^2$ to nearby SNPs. For each SNP, the maximum $r^2$ LD statistic between the SNP and
+20 nearby SNPs called by SAMtools (10 upstream and 10 downstream) is computed. Omni sites
+are then ordered by the maximum $r^2$ and divided into 40 bins. Spearman's correlation
+coefficient is calculated accumulatively starting from the bin with the smallest $r^2$.}\label{fig:ac}
+\end{figure}
+
+We downloaded the chromosome 20 alignments of 49 Pilot-1 CEU samples sequenced by the 1000 Genomes Project
+using the Illumina technology only. We called the SNPs with SAMtools and imputed the genotypes
+with Beagle under the default settings. At 32,522 sites genotyed using the Omni chip
+and polymorphic in the 49 samples, we computed Spearman's correlation coefficient
+with the the Omni genotypes stratified by the non-reference allele count (Fig.~\ref{fig:ac}).
 
 \subsection{Inferring the allele frequency spectrum}
-\begin{figure}[!htb]
+\begin{figure}[tb]
 \centering
 \includegraphics[width=.40\textwidth]{afs-cmp}
 \caption{The derived AFS conditional on heterozygotes discovered in the NA18507
-genome. Heterozygotes were called with SAMtools on BWA alignment
+genome. Heterozygotes were called with SAMtools on BWA~\citep{Li:2009uq} alignment
 (AC:SRA000271).  The ancestral sequences were determined from the Ensembl EPO
 alignment, with the requirement of the chimpanzee and orangutan sequences being
 identical.  The AFS at these hets were computed a) from the 9 independent Yoruba

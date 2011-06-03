@@ -8,7 +8,7 @@
 
 all:samtools.pdf
 
-samtools.pdf:samtools.tex samtools.bib afs-cmp.pdf ac-CEUp.pdf ld-CEUp.pdf ac-EUR1.pdf ld-EUR1.pdf at-CEU.pdf
+samtools.pdf:samtools.tex samtools.bib afs-cmp.pdf ld-CEUp.pdf ld-EUR1.pdf at-CEU.pdf
 		pdflatex samtools; bibtex samtools; pdflatex samtools; pdflatex samtools;
 
 afs-cmp.eps:afs-plot.gp
