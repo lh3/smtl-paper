@@ -245,13 +245,12 @@
   {%
   \def\@oddfoot{\vbox to 13\p@{\hbox{\rule{\textwidth}{1\p@}}\vss
         \hbox to \textwidth{\helvetica
-%        \fontsize{7}{9}\fontshape{n}\selectfont \copyright\space Oxford University Press \@copyrightyear.%lh3
+        \fontsize{7}{9}\fontshape{n}\selectfont \copyright\space Oxford University Press \@copyrightyear.%
           \hfill\small\helveticabold\thepage}%
         }}%
   \def\@evenfoot{\vbox to 13\p@{\rule{\textwidth}{1\p@}\vss
         \hbox to \textwidth{\helvetica\thepage\hfill
-%          \fontsize{7}{9}\fontshape{n}\selectfont \copyright\space Oxford University Press \@copyrightyear.}%lh3
-          \fontsize{7}{9}\fontshape{n}\selectfont \copyright\space \@copyrightyear.}
+          \fontsize{7}{9}\fontshape{n}\selectfont \copyright\space Oxford University Press \@copyrightyear.}%
         }}%
   \let\@evenhead\relax
   \let\@oddhead\relax}
@@ -455,15 +454,14 @@
   \vspace*{\aboveskipchk}%
   \vspace{\dropfromtop}%
   \hbox to \textwidth{%
-%  {\helvetica\itshape\bfseries\fontsize{19}{12}\selectfont {\color{gray}BIOINFORMATICS} %lh3
-  {\helvetica\itshape\bfseries\fontsize{19}{12}\selectfont {\color{gray}MANUSCRIPT}
+  {\helvetica\itshape\bfseries\fontsize{19}{12}\selectfont {\color{gray}BIOINFORMATICS}
     \hfil
     \if@appnotes APPLICATIONS NOTE\hfil\fi
     }%
 \enskip  \parbox[b]{11.3pc}{%
     \helvetica
     \flushright\fontsize{8}{10}\fontshape{it}\selectfont
-%        Vol. 00\ no. 00 \@pubyear\\ %lh3
+        Vol. 00\ no. 00 \@pubyear\\
         \hfill Pages \thepagerange
   }}
   \rule{\textwidth}{1\p@}\par%
@@ -476,10 +474,10 @@
     {\helvetica\fontsize{13}{15}\selectfont\raggedright \@author \par}%
         \vspace{4\p@}
     {\helvetica\fontsize{10}{12}\selectfont\raggedright \@address \par}%
-%    \vspace{4\p@} %lh3
-%    {\helvetica\fontsize{8}{10}\selectfont\raggedright \@history \par} %lh3
-%    \vspace{24\p@} %lh3
-%    {\helvetica\fontsize{10}{12}\selectfont\raggedright \@editor \par} %lh3
+    \vspace{4\p@}
+    {\helvetica\fontsize{8}{10}\selectfont\raggedright \@history \par}
+    \vspace{24\p@}
+    {\helvetica\fontsize{10}{12}\selectfont\raggedright \@editor \par}
     %\vspace{20\p@}
     }%
   }
@@ -825,7 +823,7 @@
       \setlength{\itemindent}{-4mm}}\small}
 {\end{list}\endgroup}
 
-%\RequirePackage{natbib}
+\RequirePackage{natbib}
 
 % **********
 % Appendix *
