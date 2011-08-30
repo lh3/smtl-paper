@@ -36,6 +36,8 @@ plot "<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0{print $3,$5,$6}'|luajit rms-ld.l
 	"<bzip2 -dc EUR.tab.bz2|awk '$4==670&&$5>0{if($7==0)$7=1;print $3,$5,$7}'|luajit rms-ld.lua" t 'ML estimate' w lp ls 2
 
 set out "at-CEU.eps"
+set size 1.25, 0.9
+set multiplot
 unset log y
 unset log x
 set size 0.7, 0.9
@@ -46,4 +48,12 @@ set key top left
 f(x) = x
 set xlab "Expected -log10(P-value)"
 set ylab "Observed -log10(P-value)"
-plot "<cat bgl.qq|awk 'rand()<0.0001/(10**(-$1))'" t 'Imputation' ls 1, "<cat bcf-f.qq|awk 'rand()<0.0001/(10**(-$1))'" t 'LRT' ls 2, f(x) t '' 2
+set origin 0.0, 0.0
+plot "<gzip -dc impute.qq.gz|awk 'rand()<0.001/(10**(-$1))'" t 'Imputation' ls 1, "<gzip -dc LRT.qq.gz|awk 'rand()<0.001/(10**(-$1))'" t '1-degree LRT' ls 2, f(x) t '' 2
+set origin 0.65, 0.0
+set noytics
+set yran [0:7]
+set size 0.6, 0.9
+set noytics
+set noylab
+plot "<gzip -dc LRT2.qq.gz|awk 'rand()<0.001/(10**(-$1))'" t '2-degree LRT' ls 6, f(x) t '' 2

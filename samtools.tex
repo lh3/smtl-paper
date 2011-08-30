@@ -269,6 +269,7 @@ genotypes especially when the average read depth of each individual is low. A
 proper solution is to perform a likelihood-ratio test (LRT). The test statistic is
 \begin{equation}\label{eq:hwe}
 D_e=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
+=-2\log\frac{\mathcal{L}((1-\hat{\psi})^2,2\hat{\psi}(1-\psi),\hat{\psi}^2)}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
 \end{equation}
 where
 \begin{equation}\label{eq:psimax}
@@ -336,7 +337,7 @@ caused by HWE violation (see Results).
 
 \subsubsection{Estimating the number of non-reference alleles}
 Since this section we use the term \emph{site reference allele count} to refer to
-the number of reference alleles at a site. Allele count is a discrete number
+the number of reference alleles at one single site. Allele count is a discrete number
 while allele frequency is contiguous.
 
 For convenience, define random vector $\vec{G}=(G_1,\ldots,G_n)$ to be a
@@ -381,7 +382,7 @@ $y_{jl}=z_{jl}/\binom{M_j}{l}$ instead, where $M_j=\sum_{i=1}^j m_i$. Thus
 \begin{equation}\label{equ:klky}
 \mathcal{L}(k)=y_{nk}
 \end{equation}
-and $y_{jk}$ can be computed iteratively with
+and by replacing $z_{jk}$ with $y_{jk}\binom{M_j}{l}$ in Eq.~\eqref{equ:z}, we can derive:
 \begin{eqnarray}\label{equ:y}
 y_{jk}&=&\left(\prod_{l=0}^{m_j-1}\frac{k-l}{M_{j}-l}\right)\sum_{g_j=0}^{m_j}y_{j-1,k-g_j}\cdot\binom{m_j}{g_j}\mathcal{L}_j(g_j)\\\nonumber
 	&&\cdot\left(\prod_{l=g_j}^{m_j-1}\frac{M_{j-1}-k+l+1}{k-l}\right)
@@ -416,7 +417,7 @@ $X$ is
 where $\mathcal{L}(k)$ is defined by Eq.~\eqref{equ:klk} and computed by
 Eq.~\eqref{equ:klky}.  In variant calling, we define \emph{variant quality} as
 $$
-Q_{\rm var}=-10\log_{10}\Big(1-\Pr\{X=M|\vec{d},\Phi\}\Big)
+Q_{\rm var}=-10\log_{10}\Pr\{X=M|\vec{d},\Phi\}
 $$
 and call the site as a variant if $Q_{\rm var}$ is large enough. Because in
 deriving $\mathcal{L}(k)$, we do not require the ploidy of each sample to be
@@ -424,7 +425,7 @@ the same. The variant calling method described here are in theory applicable to
 pooled resequencing with unequal pool sizes.
 
 \subsubsection{Estimating the sample allele frequency spectrum (AFS)}
-For variant calling, we typically take the Wright-Fisher AFS as the prior. We
+For variant calling (Eq.~\ref{eq:post}), we typically take the Wright-Fisher AFS as the prior. We
 can also estimate the sample AFS with the maximum-likelihood inference when the
 Wright-Fisher prior deviates from the data.
 
@@ -432,7 +433,8 @@ Suppose we have $L$ sites of interest and we want to estimate the frequency
 spectrum across these sites.  Let $X_a$, $a=1,\ldots,L$, be a random variable
 representing the number of reference alleles at site $a$. We can use an EM
 algorithm to find $\Phi$ that maximizes
-$\Pr\{{\bf d}|\Phi\}$. The iteration equation is
+$\Pr\{{\bf d}|\Phi\}$, the probability of data across all samples and all sites conditional on AFS.
+The iteration equation is
 \begin{equation}\label{eq:afs}
 \phi_k^{(t+1)}=\frac{1}{L}\sum_a\Pr\{X_a=k|{\bf d},\Phi^{(t)}\}
 \end{equation}
@@ -652,7 +654,7 @@ more appropriate.
 \subsection{Performing association test}
 \begin{figure}[tb]
 \centering
-\includegraphics[width=.27\textwidth]{at-CEU}
+\includegraphics[width=.47\textwidth]{at-CEU}
 \caption{QQ-plot comparing the association test statistics to the one-degree
 $\chi^2$ distribution.
 49 CEU samples sequenced by the 1000 Genomes Project using the Illumina
