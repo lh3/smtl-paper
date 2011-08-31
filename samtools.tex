@@ -185,7 +185,7 @@ For one sample at a site, the sequencing data $d$ is composed of an array of
 bases on sequencing reads plus their base qualities. As we only consider
 biallelic variants, we may focus on the two most evident types of nucleotides
 and drop the less evident types if present. Thus at any site we see at most two
-types of nucleotides. This treatment is not optimal, but mostly sufficient in
+types of nucleotides. This treatment is not optimal, but sufficient in
 practice.
 
 Suppose at a site there are $k$ reads. Without losing generality, let the first
@@ -261,10 +261,10 @@ with the constraint $\sum_g\xi_g=1$. The EM iteration equation is
 \end{equation}
 
 An important application of genotype frequencies is to test HWE
-for diploid samples ($m=2$).  When genotypes are known, one strategy is to
-take the frequency and perform a 1-degree $\chi^2$ test. This approach would
-not work for sequencing data as it does not account for the uncertainty in
-genotypes, especially when the average read depth of each individual is low. A
+for diploid samples ($m=2$).  When genotypes are known, we can perform
+a 1-degree $\chi^2$ test. This approach would not work for sequencing data as
+it does not account for the uncertainty in genotypes, especially when the
+average read depth of each individual is low. A
 proper solution is to perform a likelihood-ratio test (LRT). The test statistic is
 \begin{equation}\label{eq:hwe}
 D_e=-2\log\frac{\mathcal{L}(\hat{\psi})}{\mathcal{L}(\hat{\xi_0},\hat{\xi_1},\hat{\xi_2})}
@@ -651,7 +651,7 @@ site-AFS.}\label{fig:afs}
 
 To evaluate the accuracy of the estimated allele frequency spectrum (AFS), we
 compared the AFS obtained from the low-coverage data produced by the 1000
-Genomes Project and from the high-coverage data released by Complete Genomics.
+Genomes Project and from the high-coverage data released by Complete Genomics (http://bit.ly/m7LzvF).
 Fig.~\ref{fig:afs} reveals that we can infer a fairly accurate AFS using the
 EM-AFS method with 3-fold coverage per sample. On the other hand, the site-AFS
 estimate is less stable, though the overall trend looks right. To estimate
